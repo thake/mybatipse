@@ -288,8 +288,10 @@ public class BeanPropertyCache
 					{
 						String fieldName = BeanPropertyVisitor.getFieldNameFromAccessor(methodName);
 						String paramType = method.getParameterTypes()[0];
-						writableFields.put(fieldName, NameUtil.resolveTypeParam(actualTypeParams,
-							typeParams, Signature.toString(paramType)));
+						String typeParam = NameUtil.resolveTypeParam(actualTypeParams, typeParams,
+							Signature.toString(paramType));
+						writableFields.put(fieldName, typeParam);
+						BeanPropertyVisitor.handleAmbiguoutiy(fieldName, writableFields);
 					}
 				}
 				else
@@ -297,8 +299,11 @@ public class BeanPropertyCache
 					if (BeanPropertyVisitor.isGetter(methodName, parameterCount))
 					{
 						String fieldName = BeanPropertyVisitor.getFieldNameFromAccessor(methodName);
-						readableFields.put(fieldName, NameUtil.resolveTypeParam(actualTypeParams,
-							typeParams, Signature.toString(returnType)));
+						String typeParam = NameUtil.resolveTypeParam(actualTypeParams, typeParams,
+							Signature.toString(returnType));
+						readableFields.put(fieldName, typeParam);
+						BeanPropertyVisitor.handleAmbiguoutiy(fieldName, readableFields);
+						BeanPropertyVisitor.handleCollection(fieldName, typeParam, writableFields);
 					}
 				}
 			}
@@ -335,7 +340,8 @@ public class BeanPropertyCache
 	{
 		ICompilationUnit compilationUnit = (ICompilationUnit)type
 			.getAncestor(IJavaElement.COMPILATION_UNIT);
-		ASTParser parser = ASTParser.newParser(AST.JLS4);
+
+		ASTParser parser = ASTParser.newParser(AST.JLS8);
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
 		parser.setSource(compilationUnit);
 		parser.setResolveBindings(true);

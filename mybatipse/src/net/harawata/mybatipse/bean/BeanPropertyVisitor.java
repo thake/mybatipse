@@ -73,6 +73,36 @@ public class BeanPropertyVisitor extends ASTVisitor
 		this.subclassMap = subclassMap;
 	}
 
+	protected static boolean isAmbiguousCase(String fieldName)
+	{
+		return fieldName.length() > 1 && Character.isUpperCase(fieldName.charAt(0))
+			&& Character.isUpperCase(fieldName.charAt(1));
+	}
+
+	protected static void handleAmbiguoutiy(String fieldName, Map<String, String> fieldCache)
+	{
+		if (isAmbiguousCase(fieldName))
+		{
+			fieldCache.put(getAmbiguousName(fieldName), fieldCache.get(fieldName));
+		}
+	}
+
+	protected static void handleCollection(String fieldName, String type,
+		Map<String, String> writingFields)
+	{
+		if (type.startsWith("java.util.List") || type.startsWith("java.util.Collection")
+			|| type.startsWith("java.util.Set"))
+		{
+			writingFields.put(fieldName, type);
+			handleAmbiguoutiy(fieldName, writingFields);
+		}
+	}
+
+	protected static String getAmbiguousName(String fieldName)
+	{
+		return Character.toLowerCase(fieldName.charAt(0)) + fieldName.substring(1);
+	}
+
 	@Override
 	public boolean visit(TypeDeclaration node)
 	{
@@ -154,8 +184,10 @@ public class BeanPropertyVisitor extends ASTVisitor
 					SingleVariableDeclaration param = (SingleVariableDeclaration)node.parameters().get(0);
 					String qualifiedName = getQualifiedNameFromType(param.getType());
 					String fieldName = getFieldNameFromAccessor(methodName);
-					writableFields.put(fieldName,
-						NameUtil.resolveTypeParam(actualTypeParams, typeParams, qualifiedName));
+					String typeParam = NameUtil.resolveTypeParam(actualTypeParams, typeParams,
+						qualifiedName);
+					writableFields.put(fieldName, typeParam);
+					handleAmbiguoutiy(fieldName, writableFields);
 				}
 			}
 			else
@@ -163,9 +195,13 @@ public class BeanPropertyVisitor extends ASTVisitor
 				if (isGetter(methodName, parameterCount))
 				{
 					String fieldName = getFieldNameFromAccessor(methodName);
+
 					String qualifiedName = getQualifiedNameFromType(returnType);
-					readableFields.put(fieldName,
-						NameUtil.resolveTypeParam(actualTypeParams, typeParams, qualifiedName));
+					String typeParam = NameUtil.resolveTypeParam(actualTypeParams, typeParams,
+						qualifiedName);
+					readableFields.put(fieldName, typeParam);
+					handleAmbiguoutiy(fieldName, readableFields);
+					handleCollection(fieldName, typeParam, writableFields);
 				}
 			}
 		}
