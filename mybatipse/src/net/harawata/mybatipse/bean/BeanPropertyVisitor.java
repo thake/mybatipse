@@ -40,6 +40,11 @@ import net.harawata.mybatipse.util.NameUtil;
  */
 public class BeanPropertyVisitor extends ASTVisitor
 {
+	private static final String[] KNOWN_COLLECTION_TYPES = {
+		"java.util.List", "java.util.Collection", "java.util.Set",
+		"org.eclipse.emf.common.util.EList"
+	};
+
 	private IJavaProject project;
 
 	private final String qualifiedName;
@@ -90,12 +95,24 @@ public class BeanPropertyVisitor extends ASTVisitor
 	protected static void handleCollection(String fieldName, String type,
 		Map<String, String> writingFields)
 	{
-		if (type.startsWith("java.util.List") || type.startsWith("java.util.Collection")
-			|| type.startsWith("java.util.Set"))
+		if (isKnownCollectionType(type))
 		{
 			writingFields.put(fieldName, type);
 			handleAmbiguoutiy(fieldName, writingFields);
 		}
+	}
+
+	private static boolean isKnownCollectionType(String type)
+	{
+
+		for (String collType : KNOWN_COLLECTION_TYPES)
+		{
+			if (type.startsWith(collType))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	protected static String getAmbiguousName(String fieldName)
